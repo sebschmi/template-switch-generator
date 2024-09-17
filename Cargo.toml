@@ -8,7 +8,7 @@ license = "BSD-2-Clause"
 
 [dependencies]
 clap = { version = "4.5.17", features = ["derive"] }
-compact-genome = { version = "4.0.2", features = ["io"] }
+compact-genome = { version = "5.0.0", features = ["io"] }
 thiserror = "1.0.63"
 serde = { version = "1", features = ["derive"] }
 ciborium = "0.2.2"

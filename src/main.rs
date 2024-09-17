@@ -5,7 +5,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use compact_genome::{
     implementation::{alphabets::dna_alphabet::DnaAlphabet, DefaultSequenceStore},
     interface::alphabet::Alphabet,
-    io::fasta::read_fasta_file,
+    io::fasta::{read_fasta_file, read_fuzzy_fasta_file},
 };
 
 mod error;
@@ -39,9 +39,11 @@ struct CreateModelCommand {
     #[arg(short, long)]
     output: PathBuf,
 
-    /// Ignore n-grams that contain unknown characters.
+    /// Compute n-grams after removing all unknown characters.
+    ///
+    /// If this is set to false, then unknown characters will result in an error.
     #[arg(short, long, default_value = "true")]
-    ignore_unknown_characters: bool,
+    skip_unknown_characters: bool,
 
     /// The length of the n-grams in the model.
     ///
@@ -82,7 +84,11 @@ fn create_n_gram_model_for_alphabet<AlphabetType: 'static + Alphabet>(
 ) -> Result<()> {
     let mut sequence_store = DefaultSequenceStore::<AlphabetType>::new();
     #[expect(unused)]
-    let handles = read_fasta_file(&create_model_command.input_fasta, &mut sequence_store)?;
+    let handles = if create_model_command.skip_unknown_characters {
+        read_fuzzy_fasta_file(&create_model_command.input_fasta, &mut sequence_store)?
+    } else {
+        read_fasta_file(&create_model_command.input_fasta, &mut sequence_store)?
+    };
 
     todo!()
 }
