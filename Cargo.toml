@@ -1,6 +1,8 @@
 [package]
 name = "tsgen"
+description = "A random genome generator that generates template switches."
 version = "0.0.0"
 edition = "2021"
+license = "BSD-2-Clause"
 
 [dependencies]
