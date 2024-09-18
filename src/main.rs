@@ -1,12 +1,19 @@
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 
 use crate::error::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use compact_genome::{
-    implementation::{alphabets::dna_alphabet::DnaAlphabet, DefaultSequenceStore},
-    interface::alphabet::Alphabet,
-    io::fasta::{read_fasta_file, read_fuzzy_fasta_file},
+    implementation::{
+        alphabets::dna_alphabet::DnaAlphabet,
+        bit_array_kmer::{BitStore, BitViewSized},
+        DefaultSequenceStore,
+    },
+    interface::{alphabet::Alphabet, sequence::GenomeSequence, sequence_store::SequenceStore},
+    io::fasta::read_fasta_file,
 };
+use error::Error;
+use n_gram_model::NGramModel;
+use serde::Serialize;
 
 mod error;
 mod n_gram_model;
@@ -41,11 +48,17 @@ struct CreateModelCommand {
 
     /// Compute n-grams after removing all unknown characters.
     ///
-    /// If this is set to false, then unknown characters will result in an error.
-    #[arg(short, long, default_value = "true")]
+    /// If this is not set, then unknown characters will result in an error.
+    #[arg(short, long)]
     skip_unknown_characters: bool,
 
-    /// The length of the n-grams in the model.
+    /// Compute n-grams after capitalising all unknown characters.
+    ///
+    /// Capitalisation happens before skipping unknown characters.
+    #[arg(short, long)]
+    capitalise_characters: bool,
+
+    /// The number of predecessor characters that determine the probability of the next character.
     ///
     /// Setting this to zero means that all characters are generated independently,
     /// setting it to one means that characters are generated with a probability depending on the previous one character, and so on.
@@ -61,7 +74,7 @@ enum CliAlphabet {
 #[derive(Args)]
 struct GenerateTwinCommand {}
 
-fn main() -> Result<()> {
+fn main() {
     let cli = Cli::parse();
 
     match cli.command {
@@ -71,31 +84,86 @@ fn main() -> Result<()> {
         #[expect(unused)]
         CliCommands::GenerateTwin(generate_twin_command) => todo!(),
     }
+    .unwrap_or_else(|error| println!("Error: {error}"));
 }
 
 fn create_n_gram_model(create_model_command: CreateModelCommand) -> Result<()> {
     match create_model_command.alphabet {
-        CliAlphabet::Dna => create_n_gram_model_for_alphabet::<DnaAlphabet>(create_model_command),
+        CliAlphabet::Dna => create_n_gram_model_for_alphabet::<{ DnaAlphabet::SIZE }, DnaAlphabet>(
+            create_model_command,
+        ),
     }
 }
 
-fn create_n_gram_model_for_alphabet<AlphabetType: 'static + Alphabet>(
+fn create_n_gram_model_for_alphabet<const ALPHABET_SIZE: usize, AlphabetType: 'static + Alphabet>(
     create_model_command: CreateModelCommand,
-) -> Result<()> {
+) -> Result<()>
+where
+    [u32; ALPHABET_SIZE]: Serialize,
+{
     let mut sequence_store = DefaultSequenceStore::<AlphabetType>::new();
-    #[expect(unused)]
-    let handles = if create_model_command.skip_unknown_characters {
-        read_fuzzy_fasta_file(&create_model_command.input_fasta, &mut sequence_store)?
-    } else {
-        read_fasta_file(&create_model_command.input_fasta, &mut sequence_store)?
-    };
+    let sequences = read_fasta_file(
+        &create_model_command.input_fasta,
+        &mut sequence_store,
+        create_model_command.skip_unknown_characters,
+        create_model_command.capitalise_characters,
+    )?
+    .into_iter()
+    .map(|record| sequence_store.get(&record.sequence_handle));
 
-    todo!()
+    match create_model_command.n_gram_context_length {
+        0 => create_n_gram_model_for_alphabet_and_n::<0, ALPHABET_SIZE, u8, AlphabetType, _>(
+            create_model_command,
+            sequences,
+        ),
+        1 => {
+            assert!(AlphabetType::SIZE <= 256);
+            create_n_gram_model_for_alphabet_and_n::<1, ALPHABET_SIZE, u8, AlphabetType, _>(
+                create_model_command,
+                sequences,
+            )
+        }
+        2 => {
+            assert!(AlphabetType::SIZE <= 16);
+            create_n_gram_model_for_alphabet_and_n::<2, ALPHABET_SIZE, u8, AlphabetType, _>(
+                create_model_command,
+                sequences,
+            )
+        }
+        3 => {
+            assert!(AlphabetType::SIZE <= 4);
+            create_n_gram_model_for_alphabet_and_n::<3, ALPHABET_SIZE, u8, AlphabetType, _>(
+                create_model_command,
+                sequences,
+            )
+        }
+        4 => {
+            assert!(AlphabetType::SIZE <= 4);
+            create_n_gram_model_for_alphabet_and_n::<4, ALPHABET_SIZE, u8, AlphabetType, _>(
+                create_model_command,
+                sequences,
+            )
+        }
+        n => Err(Error::UnsupportedN(n)),
+    }
 }
 
-#[expect(unused, clippy::extra_unused_type_parameters)]
-fn create_n_gram_model_for_alphabet_and_n<const N: usize, AlphabetType: 'static + Alphabet>(
+fn create_n_gram_model_for_alphabet_and_n<
+    'item,
+    const N: usize,
+    const ALPHABET_SIZE: usize,
+    BitArrayType: BitViewSized + BitStore + Serialize,
+    AlphabetType: 'static + Alphabet,
+    SubsequenceType: 'item + GenomeSequence<AlphabetType, SubsequenceType> + ?Sized,
+>(
     create_model_command: CreateModelCommand,
-) -> Result<()> {
-    todo!()
+    sequences: impl IntoIterator<Item = &'item SubsequenceType>,
+) -> Result<()>
+where
+    [u32; ALPHABET_SIZE]: Serialize,
+{
+    let model = NGramModel::<N, ALPHABET_SIZE, _, BitArrayType>::from_sequences(sequences);
+    ciborium::into_writer(&model, File::create(&create_model_command.output)?)?;
+
+    Ok(())
 }
