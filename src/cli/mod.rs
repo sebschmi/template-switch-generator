@@ -89,47 +89,47 @@ pub struct GeneratePairCommand {
     pub reference_ancestry_fraction: f64,
 
     /// The number of template switches to generate.
-    #[arg(long)]
+    #[arg(long, default_value = "1")]
     pub template_switch_amount: usize,
 
     /// The minimum length of a template switch.
-    #[arg(long)]
+    #[arg(long, default_value = "10")]
     pub template_switch_min_length: usize,
 
     /// The maximum length of a template switch.
-    #[arg(long)]
+    #[arg(long, default_value = "30")]
     pub template_switch_max_length: usize,
 
     /// The minimum offset of a template switch.
-    #[arg(long)]
+    #[arg(long, allow_negative_numbers = true, default_value = "-30")]
     pub template_switch_min_offset: isize,
 
     /// The maximum offset of a template switch.
-    #[arg(long)]
+    #[arg(long, allow_negative_numbers = true, default_value = "10")]
     pub template_switch_max_offset: isize,
 
     /// The minimum length difference of a template switch.
-    #[arg(long)]
+    #[arg(long, allow_negative_numbers = true, default_value = "-10")]
     pub template_switch_min_length_difference: isize,
 
     /// The maximum length difference of a template switch.
-    #[arg(long)]
+    #[arg(long, allow_negative_numbers = true, default_value = "10")]
     pub template_switch_max_length_difference: isize,
 
     /// The number of gaps to generate.
-    #[arg(long)]
+    #[arg(long, default_value = "10")]
     pub gap_amount: usize,
 
     /// The parameter mean of the exponential distribution determining the gap length.
-    #[arg(long)]
+    #[arg(long, allow_negative_numbers = true, default_value = "3.0")]
     pub gap_length_mean: f64,
 
     /// The number of substitutions to generate.
-    #[arg(long)]
+    #[arg(long, default_value = "10")]
     pub substitution_amount: usize,
 
     /// The seed to use for the random generator.
-    #[arg(long)]
+    #[arg(long, default_value = "0")]
     pub random_seed: u64,
 }
 
