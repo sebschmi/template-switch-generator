@@ -22,12 +22,14 @@ use error::Error;
 use n_gram_model::NGramModel;
 use rand::SeedableRng;
 use rand_xoshiro::Xoshiro256PlusPlus;
+use sequence_modifier::{SequenceModifier, SequenceModifierPair};
 use serde::{Deserialize, Serialize};
 
 mod choose_alphabet_and_n;
 mod cli;
 mod error;
 mod n_gram_model;
+mod sequence_modifier;
 
 fn main() {
     let cli = Cli::parse();
@@ -93,30 +95,7 @@ impl ChooseAlphabetAndN for CreateNGramModel {
 }
 
 fn generate_pair(generate_pair_command: GeneratePairCommand) -> Result<()> {
-    // Verify some inputs.
-    if generate_pair_command.reference_ancestry_fraction.is_nan() {
-        return Err(Error::ReferenceAncestryFractionIsNaN);
-    }
-    if generate_pair_command.reference_ancestry_fraction < 0.0
-        || generate_pair_command.reference_ancestry_fraction > 1.0
-    {
-        return Err(Error::ReferenceAncestryFractionOutOfRange(
-            generate_pair_command.reference_ancestry_fraction,
-        ));
-    }
-
-    if generate_pair_command.gap_length_mean.is_nan() {
-        return Err(Error::GapLengthMeanIsNaN);
-    }
-    if generate_pair_command.gap_length_mean < 1.0
-        || generate_pair_command.gap_length_mean > generate_pair_command.ancestor_length as f64
-    {
-        return Err(Error::GapLengthMeanOutOfRange {
-            actual: generate_pair_command.gap_length_mean,
-            minimum: 1.0,
-            maximum: generate_pair_command.ancestor_length as f64,
-        });
-    }
+    generate_pair_command.verify()?;
 
     let mut input = BufReader::new(File::open(&generate_pair_command.model)?);
     let n: usize = ciborium::from_reader(&mut input)?;
@@ -165,7 +144,6 @@ impl ChooseAlphabetAndN for GeneratePair {
         // Generate ancestor.
         let ancestor: DefaultGenome<_> =
             model.generate_sequence(generate_pair_command.ancestor_length, &mut rng)?;
-        #[expect(unused)]
         let ancestor = if let Some(ancestor_output) = &generate_pair_command.ancestor_output {
             let records = [FastaRecord {
                 id: "ancestor".to_string(),
@@ -179,6 +157,41 @@ impl ChooseAlphabetAndN for GeneratePair {
             ancestor
         };
 
-        todo!()
+        // Derive reference and query from ancestor.
+        let mut reference = ancestor.clone();
+        let mut query = ancestor.clone();
+
+        let SequenceModifierPair {
+            mut reference_modifier,
+            mut query_modifier,
+        } = SequenceModifier::new_modifier_pair(
+            generate_pair_command.reference_ancestry_fraction,
+            generate_pair_command.sequence_modification_amount,
+            generate_pair_command.sequence_modification_parameters,
+            &mut rng,
+        );
+
+        reference_modifier.apply(&mut reference, &mut rng)?;
+        query_modifier.apply(&mut query, &mut rng)?;
+
+        // Write sequences.
+        write_fasta_file(
+            &generate_pair_command.output,
+            &[
+                FastaRecord {
+                    id: "reference".to_string(),
+                    comment: String::new(),
+                    sequence_handle: reference,
+                },
+                FastaRecord {
+                    id: "query".to_string(),
+                    comment: String::new(),
+                    sequence_handle: query,
+                },
+            ],
+            &HandleSequenceStore::new(),
+        )?;
+
+        Ok(())
     }
 }
