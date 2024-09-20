@@ -3,7 +3,7 @@ use compact_genome::interface::{
     sequence::{EditableGenomeSequence, GenomeSequence},
 };
 use rand::{seq::IteratorRandom, Rng};
-use rand_distr::{Distribution, Exp, Uniform};
+use rand_distr::{Distribution, Exp};
 
 use crate::{
     cli::{SequenceModificationAmount, SequenceModificationParameters},
@@ -17,6 +17,7 @@ pub struct SequenceModifier {
 
 #[derive(Clone, Copy)]
 pub enum SequenceModification {
+    #[expect(unused)]
     TemplateSwitch {
         position: usize,
         length: usize,
@@ -136,6 +137,7 @@ impl SequenceModifier {
                         ..(sequence_length as isize
                             - 0.max(offset).max(length).max(length + length_difference))
                             - self.sequence_modification_parameters.template_switch_margin as isize;
+                    #[expect(unused)]
                     let position = position_range.clone().choose(rng).ok_or_else(|| {
                         Error::SequenceTooShortForTemplateSwitch {
                             sequence_length,
@@ -145,12 +147,13 @@ impl SequenceModifier {
                         }
                     })?;
 
-                    SequenceModification::TemplateSwitch {
+                    /*SequenceModification::TemplateSwitch {
                         position: position as usize,
                         length: length as usize,
                         offset,
                         length_difference,
-                    }
+                    }*/
+                    todo!("prevent consecutive template switches from interacting")
                 } else if index
                     < self.sequence_modification_amount.template_switch_amount
                         + self.sequence_modification_amount.gap_amount
@@ -225,6 +228,7 @@ impl SequenceModifier {
 }
 
 impl SequenceModification {
+    #[expect(unused)]
     pub fn apply<
         AlphabetType: Alphabet,
         SequenceType: EditableGenomeSequence<AlphabetType, SubsequenceType>,
