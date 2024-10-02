@@ -280,7 +280,6 @@ impl SequenceModifier {
 }
 
 impl SequenceModification {
-    #[expect(unused)]
     pub fn apply<
         AlphabetType: Alphabet,
         SequenceType: EditableGenomeSequence<AlphabetType, SubsequenceType>,
@@ -295,13 +294,32 @@ impl SequenceModification {
                 length,
                 offset,
                 length_difference,
-            } => todo!(),
+            } => {
+                let replacement: SequenceType = sequence
+                    .reverse_complement_iter()
+                    .skip(sequence.len() - (position as isize + offset + 1) as usize)
+                    .take(length)
+                    .collect();
+                sequence.splice(
+                    position..((position as isize + length as isize - length_difference) as usize),
+                    replacement,
+                );
+            }
+
             SequenceModification::Insertion {
                 position,
                 source,
                 length,
-            } => todo!(),
-            SequenceModification::Deletion { position, length } => todo!(),
+            } => {
+                let insertion: SequenceType =
+                    sequence.iter().skip(source).take(length).cloned().collect();
+                sequence.splice(position..position, insertion);
+            }
+
+            SequenceModification::Deletion { position, length } => {
+                sequence.delete(position..position + length)
+            }
+
             SequenceModification::Substitution {
                 position,
                 character_increment,
