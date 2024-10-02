@@ -56,7 +56,7 @@ fn with_alphabet_and_n<
 where
     [u32; ALPHABET_SIZE]: Serialize + for<'de> Deserialize<'de>,
 {
-    let n_gram_bit_width = ALPHABET_SIZE.ilog2() as usize;
+    let n_gram_bit_width = (ALPHABET_SIZE + 1).ilog2() as usize;
     let bit_width = n_gram_bit_width * N;
 
     if bit_width <= 8 {
@@ -96,17 +96,17 @@ pub trait ChooseAlphabetAndN {
 mod tests {
     #[test]
     fn test_ilog2() {
-        assert_eq!(1usize.ilog2(), 1);
+        assert_eq!(1usize.ilog2(), 0);
+
         assert_eq!(2usize.ilog2(), 1);
+        assert_eq!(3usize.ilog2(), 1);
 
-        assert_eq!(3usize.ilog2(), 2);
         assert_eq!(4usize.ilog2(), 2);
+        assert_eq!(5usize.ilog2(), 2);
+        assert_eq!(6usize.ilog2(), 2);
+        assert_eq!(7usize.ilog2(), 2);
 
-        assert_eq!(5usize.ilog2(), 3);
-        assert_eq!(6usize.ilog2(), 3);
-        assert_eq!(7usize.ilog2(), 3);
         assert_eq!(8usize.ilog2(), 3);
-
-        assert_eq!(9usize.ilog2(), 4);
+        assert_eq!(9usize.ilog2(), 3);
     }
 }

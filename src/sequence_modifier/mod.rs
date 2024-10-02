@@ -206,7 +206,7 @@ impl SequenceModifier {
                         gap_length.round() as usize
                     };
 
-                    if gap_length < sequence_length {
+                    if gap_length > sequence_length {
                         return Err(Error::SequenceTooShortForGap {
                             sequence_length,
                             gap_length,
