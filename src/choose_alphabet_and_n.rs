@@ -41,6 +41,11 @@ where
         2 => with_alphabet_and_n::<2, ALPHABET_SIZE, AlphabetType, Function>(arguments),
         3 => with_alphabet_and_n::<3, ALPHABET_SIZE, AlphabetType, Function>(arguments),
         4 => with_alphabet_and_n::<4, ALPHABET_SIZE, AlphabetType, Function>(arguments),
+        5 => with_alphabet_and_n::<5, ALPHABET_SIZE, AlphabetType, Function>(arguments),
+        6 => with_alphabet_and_n::<6, ALPHABET_SIZE, AlphabetType, Function>(arguments),
+        7 => with_alphabet_and_n::<7, ALPHABET_SIZE, AlphabetType, Function>(arguments),
+        8 => with_alphabet_and_n::<8, ALPHABET_SIZE, AlphabetType, Function>(arguments),
+        9 => with_alphabet_and_n::<9, ALPHABET_SIZE, AlphabetType, Function>(arguments),
         n => Err(Error::UnsupportedN(n)),
     }
 }
