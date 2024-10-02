@@ -2,7 +2,7 @@
 name = "tsgen"
 description = "A random genome generator that generates template switches."
 authors = ["Sebastian Schmidt <sebastian.schmidt@helsinki.fi>"]
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
 license = "BSD-2-Clause"
 
