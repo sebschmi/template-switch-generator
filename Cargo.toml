@@ -7,9 +7,9 @@ edition = "2021"
 license = "BSD-2-Clause"
 
 [dependencies]
-clap = { version = "4.5.17", features = ["derive"] }
+clap = { version = "4.5.19", features = ["derive"] }
 compact-genome = { version = "10.0.2", features = ["io", "serde", "rand"] }
-thiserror = "1.0.63"
+thiserror = "1.0.64"
 serde = { version = "1.0.210", features = ["derive"] }
 ciborium = "0.2.2"
 rand = "0.8.5"
