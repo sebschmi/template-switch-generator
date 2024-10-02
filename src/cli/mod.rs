@@ -118,6 +118,16 @@ pub struct SequenceModificationAmount {
 
 #[derive(Args, Clone, Copy)]
 pub struct SequenceModificationParameters {
+    /// If set, template switches are allowed to overlap.
+    #[arg(long)]
+    pub template_switch_overlap: bool,
+
+    /// The maximum number of tries to create a non-overlapping template switch.
+    /// If the maximum number of tries is reached and `--template-switch-overlap` is not set,
+    /// then the generation aborts with an error.
+    #[arg(long, default_value = "10000")]
+    pub template_switch_maximum_overlap_tries: usize,
+
     /// The minimum length of a template switch.
     #[arg(long, default_value = "10")]
     pub template_switch_min_length: usize,

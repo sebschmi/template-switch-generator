@@ -70,4 +70,9 @@ pub enum Error {
         sequence_length: usize,
         gap_length: usize,
     },
+
+    #[error(
+        "the maximum number of tries for generating an overlap-free template switch was reached"
+    )]
+    TemplateSwitchOverlap,
 }

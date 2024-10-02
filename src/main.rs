@@ -22,7 +22,10 @@ use error::Error;
 use n_gram_model::NGramModel;
 use rand::SeedableRng;
 use rand_xoshiro::Xoshiro256PlusPlus;
-use sequence_modifier::{SequenceModifier, SequenceModifierPair};
+use sequence_modifier::{
+    template_switch_overlap_detector::TemplateSwitchOverlapDetector, SequenceModifier,
+    SequenceModifierPair,
+};
 use serde::{Deserialize, Serialize};
 
 mod choose_alphabet_and_n;
@@ -171,8 +174,16 @@ impl ChooseAlphabetAndN for GeneratePair {
             &mut rng,
         );
 
-        reference_modifier.apply(&mut reference, &mut rng)?;
-        query_modifier.apply(&mut query, &mut rng)?;
+        let mut template_switch_overlap_detector = TemplateSwitchOverlapDetector::new(
+            &generate_pair_command.sequence_modification_parameters,
+        );
+        reference_modifier.apply(
+            &mut reference,
+            &mut template_switch_overlap_detector,
+            &mut rng,
+        )?;
+        template_switch_overlap_detector.clear_modification_stack();
+        query_modifier.apply(&mut query, &mut template_switch_overlap_detector, &mut rng)?;
 
         // Write sequences.
         write_fasta_file(

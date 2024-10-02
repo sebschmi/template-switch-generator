@@ -4,20 +4,22 @@ use compact_genome::interface::{
 };
 use rand::{seq::IteratorRandom, Rng};
 use rand_distr::{Distribution, Exp};
+use template_switch_overlap_detector::TemplateSwitchOverlapDetector;
 
 use crate::{
     cli::{SequenceModificationAmount, SequenceModificationParameters},
     error::{Error, Result},
 };
 
+pub mod template_switch_overlap_detector;
+
 pub struct SequenceModifier {
     sequence_modification_amount: SequenceModificationAmount,
     sequence_modification_parameters: SequenceModificationParameters,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum SequenceModification {
-    #[expect(unused)]
     TemplateSwitch {
         position: usize,
         length: usize,
@@ -91,6 +93,7 @@ impl SequenceModifier {
         &mut self,
         sequence_length: usize,
         alphabet_size: usize,
+        template_switch_overlap_detector: &mut TemplateSwitchOverlapDetector,
         rng: &mut impl Rng,
     ) -> Result<Option<SequenceModification>> {
         assert!(alphabet_size > 1);
@@ -107,53 +110,80 @@ impl SequenceModifier {
                 if index < self.sequence_modification_amount.template_switch_amount {
                     debug_assert!(self.sequence_modification_amount.template_switch_amount > 0);
                     self.sequence_modification_amount.template_switch_amount -= 1;
+                    let mut tries = 0;
 
-                    let offset = (self
-                        .sequence_modification_parameters
-                        .template_switch_min_offset
-                        ..=self
-                            .sequence_modification_parameters
-                            .template_switch_max_offset)
-                        .choose(rng)
-                        .unwrap();
-                    let length = (self
-                        .sequence_modification_parameters
-                        .template_switch_min_length
-                        ..=self
-                            .sequence_modification_parameters
-                            .template_switch_max_length)
-                        .choose(rng)
-                        .unwrap() as isize;
-                    let length_difference = (self
-                        .sequence_modification_parameters
-                        .template_switch_min_length_difference
-                        ..=self
-                            .sequence_modification_parameters
-                            .template_switch_max_length_difference)
-                        .choose(rng)
-                        .unwrap();
-                    let position_range = 0.max(offset - length)
-                        + self.sequence_modification_parameters.template_switch_margin as isize
-                        ..(sequence_length as isize
-                            - 0.max(offset).max(length).max(length + length_difference))
-                            - self.sequence_modification_parameters.template_switch_margin as isize;
-                    #[expect(unused)]
-                    let position = position_range.clone().choose(rng).ok_or_else(|| {
-                        Error::SequenceTooShortForTemplateSwitch {
-                            sequence_length,
-                            template_switch_required_sequence_length: (position_range.start
-                                + (sequence_length as isize - position_range.end))
-                                as usize,
+                    loop {
+                        if tries
+                            < self
+                                .sequence_modification_parameters
+                                .template_switch_maximum_overlap_tries
+                        {
+                            tries += 1;
+                        } else {
+                            return Err(Error::TemplateSwitchOverlap);
                         }
-                    })?;
 
-                    /*SequenceModification::TemplateSwitch {
-                        position: position as usize,
-                        length: length as usize,
-                        offset,
-                        length_difference,
-                    }*/
-                    todo!("prevent consecutive template switches from interacting")
+                        let offset = (self
+                            .sequence_modification_parameters
+                            .template_switch_min_offset
+                            ..=self
+                                .sequence_modification_parameters
+                                .template_switch_max_offset)
+                            .choose(rng)
+                            .unwrap();
+                        let length = (self
+                            .sequence_modification_parameters
+                            .template_switch_min_length
+                            ..=self
+                                .sequence_modification_parameters
+                                .template_switch_max_length)
+                            .choose(rng)
+                            .unwrap() as isize;
+                        let length_difference = (self
+                            .sequence_modification_parameters
+                            .template_switch_min_length_difference
+                            ..=(self
+                                .sequence_modification_parameters
+                                .template_switch_max_length_difference)
+                                .min(length))
+                            .choose(rng)
+                            .unwrap();
+                        let position_range = 0.max(offset - length)
+                            + self.sequence_modification_parameters.template_switch_margin as isize
+                            ..(sequence_length as isize
+                                - 0.max(offset).max(length).max(length + length_difference))
+                                - self.sequence_modification_parameters.template_switch_margin
+                                    as isize;
+
+                        let position = position_range.clone().choose(rng).ok_or_else(|| {
+                            Error::SequenceTooShortForTemplateSwitch {
+                                sequence_length,
+                                template_switch_required_sequence_length: (position_range.start
+                                    + (sequence_length as isize - position_range.end))
+                                    as usize,
+                            }
+                        })?;
+
+                        let result = SequenceModification::TemplateSwitch {
+                            position: position as usize,
+                            length: length as usize,
+                            offset,
+                            length_difference,
+                        };
+
+                        if self
+                            .sequence_modification_parameters
+                            .template_switch_overlap
+                        {
+                            break result;
+                        } else {
+                            match template_switch_overlap_detector
+                                .apply_modification(result) {
+                                    template_switch_overlap_detector::TemplateSwitchCollision::Overlap => { /* retry */ }
+                                    template_switch_overlap_detector::TemplateSwitchCollision::Independent => break result,
+                                }
+                        }
+                    }
                 } else if index
                     < self.sequence_modification_amount.template_switch_amount
                         + self.sequence_modification_amount.gap_amount
@@ -183,7 +213,7 @@ impl SequenceModifier {
                         });
                     }
 
-                    if rng.gen_bool(0.5) {
+                    let result = if rng.gen_bool(0.5) {
                         SequenceModification::Insertion {
                             position: (0..sequence_length).choose(rng).unwrap(),
                             source: (0..sequence_length - gap_length).choose(rng).unwrap(),
@@ -194,15 +224,31 @@ impl SequenceModifier {
                             position: (0..sequence_length - gap_length).choose(rng).unwrap(),
                             length: gap_length,
                         }
+                    };
+
+                    if !self
+                        .sequence_modification_parameters
+                        .template_switch_overlap
+                    {
+                        template_switch_overlap_detector.apply_modification(result);
                     }
+                    result
                 } else {
                     debug_assert!(self.sequence_modification_amount.substitution_amount > 0);
                     self.sequence_modification_amount.substitution_amount -= 1;
 
-                    SequenceModification::Substitution {
+                    let result = SequenceModification::Substitution {
                         position: (0..sequence_length).choose(rng).unwrap(),
                         character_increment: (1..alphabet_size).choose(rng).unwrap(),
+                    };
+
+                    if !self
+                        .sequence_modification_parameters
+                        .template_switch_overlap
+                    {
+                        template_switch_overlap_detector.apply_modification(result);
                     }
+                    result
                 },
             ))
         } else {
@@ -217,9 +263,15 @@ impl SequenceModifier {
     >(
         &mut self,
         sequence: &mut SequenceType,
+        template_switch_overlap_detector: &mut TemplateSwitchOverlapDetector,
         rng: &mut impl Rng,
     ) -> Result<()> {
-        while let Some(modification) = self.next(sequence.len(), AlphabetType::SIZE, rng)? {
+        while let Some(modification) = self.next(
+            sequence.len(),
+            AlphabetType::SIZE,
+            template_switch_overlap_detector,
+            rng,
+        )? {
             modification.apply(sequence)?;
         }
 
