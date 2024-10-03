@@ -487,7 +487,7 @@ checksum = "eccc87c72a0ca5aec58d3f762b496c87c6500884511fcf878942dd8bed63cc69"
 
 [[package]]
 name = "tsgen"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ciborium",
  "clap",
