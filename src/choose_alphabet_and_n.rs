@@ -64,7 +64,11 @@ where
     let n_gram_bit_width = (ALPHABET_SIZE + 1).ilog2() as usize;
     let bit_width = n_gram_bit_width * N;
 
-    if bit_width <= 8 {
+    if bit_width == 0 {
+        // We would like to use the following, but () does not implement the required bitvec traits...
+        // Function::call::<N, ALPHABET_SIZE, (), AlphabetType>(arguments)
+        Function::call::<N, ALPHABET_SIZE, u8, AlphabetType>(arguments)
+    } else if bit_width <= 8 {
         Function::call::<N, ALPHABET_SIZE, u8, AlphabetType>(arguments)
     } else if bit_width <= 16 {
         Function::call::<N, ALPHABET_SIZE, u16, AlphabetType>(arguments)
