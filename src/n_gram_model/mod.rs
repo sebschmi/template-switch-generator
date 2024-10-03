@@ -51,7 +51,8 @@ impl<
                 let successor = sequence[offset + N].clone();
 
                 if let Some(abundances) = result.model.get_mut(&kmer) {
-                    abundances[successor.index()] += 1;
+                    abundances[successor.index()] =
+                        abundances[successor.index()].checked_add(1).unwrap();
                 } else {
                     let mut abundances = [0; ALPHABET_SIZE];
                     abundances[successor.index()] = 1;
