@@ -50,6 +50,15 @@ impl TemplateSwitchOverlapDetector {
                 let range_limit = position
                     .max((position as isize + length as isize - length_difference) as usize)
                     .max((position as isize + offset) as usize);
+
+                debug_assert!(range_offset <= range_limit);
+                if range_offset < self.margin
+                    || range_offset > isize::MAX as usize
+                    || range_limit > isize::MAX as usize
+                {
+                    return TemplateSwitchCollision::Overlap;
+                }
+
                 let new_range = (range_offset - self.margin)..(range_limit + self.margin);
 
                 let new_range = self.modification_stack.iter().rev().fold(
