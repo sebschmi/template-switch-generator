@@ -19,6 +19,7 @@ use compact_genome::{
     io::fasta::{read_fasta_file, write_fasta_file, FastaRecord},
 };
 use error::Error;
+use log::{info, LevelFilter};
 use n_gram_model::NGramModel;
 use rand::SeedableRng;
 use rand_xoshiro::Xoshiro256PlusPlus;
@@ -27,6 +28,7 @@ use sequence_modifier::{
     SequenceModifierPair,
 };
 use serde::{Deserialize, Serialize};
+use simplelog::{ColorChoice, TermLogger, TerminalMode};
 
 mod choose_alphabet_and_n;
 mod cli;
@@ -35,6 +37,14 @@ mod n_gram_model;
 mod sequence_modifier;
 
 fn main() {
+    TermLogger::init(
+        LevelFilter::Info,
+        Default::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .unwrap();
+
     let cli = Cli::parse();
 
     match cli.command {
@@ -67,6 +77,7 @@ impl ChooseAlphabetAndN for CreateNGramModel {
         [u32; ALPHABET_SIZE]: Serialize + for<'de> Deserialize<'de>,
     {
         // Load sequences.
+        info!("Loading sequences...");
         let mut sequence_store =
             HandleSequenceStore::<AlphabetType, DefaultGenome<_>, DefaultSubGenome<_>>::new();
         let sequences = read_fasta_file(
@@ -79,10 +90,12 @@ impl ChooseAlphabetAndN for CreateNGramModel {
         .map(|record| record.sequence_handle);
 
         // Create model.
+        info!("Creating model...");
         let model = NGramModel::<N, ALPHABET_SIZE, _, BitArrayType>::from_sequences(sequences);
-        let mut output = BufWriter::new(File::create(&create_model_command.output)?);
 
         // Write model parameters and model.
+        info!("Storing model...");
+        let mut output = BufWriter::new(File::create(&create_model_command.output)?);
         ciborium::into_writer(&N, &mut output)?;
         ciborium::into_writer(
             &AlphabetType::into_cli_alphabet()
