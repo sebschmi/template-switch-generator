@@ -142,8 +142,6 @@ impl<
 }
 
 impl<
-        'model,
-        'rng,
         const N: usize,
         const ALPHABET_SIZE: usize,
         AlphabetType: Alphabet,
@@ -151,8 +149,8 @@ impl<
         RandomNumberGenerator: Rng,
     > Iterator
     for NGramSequenceGenerator<
-        'model,
-        'rng,
+        '_,
+        '_,
         N,
         ALPHABET_SIZE,
         AlphabetType,
