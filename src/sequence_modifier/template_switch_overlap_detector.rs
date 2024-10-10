@@ -1,6 +1,6 @@
-use std::ops::Range;
+use std::{io::Write, ops::Range};
 
-use crate::cli::SequenceModificationParameters;
+use crate::{cli::SequenceModificationParameters, error::Result};
 
 use super::SequenceModification;
 
@@ -139,6 +139,14 @@ impl TemplateSwitchOverlapDetector {
                 TemplateSwitchCollision::Independent
             }
         }
+    }
+
+    pub fn write_modifications(&self, output: &mut impl Write) -> Result<()> {
+        for modification in &self.modification_stack {
+            writeln!(output, "{modification}")?;
+        }
+
+        Ok(())
     }
 }
 

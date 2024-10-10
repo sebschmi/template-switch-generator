@@ -70,6 +70,11 @@ pub struct GeneratePairCommand {
     #[arg(long)]
     pub ancestor_output: Option<PathBuf>,
 
+    /// If set, the edit operations on the reference and query will be stored in this text file.
+    /// It will be overwritten if it already exists.
+    #[arg(long)]
+    pub debug_output: Option<PathBuf>,
+
     /// The length of the ancestor sequence to generate.
     #[arg(short = 'l', long)]
     pub ancestor_length: usize,

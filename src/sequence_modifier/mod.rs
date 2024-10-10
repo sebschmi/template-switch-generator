@@ -359,3 +359,14 @@ fn split_int_random(int: usize, fraction: f64, rng: &mut impl Rng) -> (usize, us
         (amount1_int, amount2_int)
     }
 }
+
+impl std::fmt::Display for SequenceModification {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SequenceModification::TemplateSwitch { position, length, offset, length_difference } => write!(f, "TS at {position} with offset = {offset}, length = {length} and length_difference = {length_difference}"),
+            SequenceModification::Insertion { position,  length, .. } => write!(f, "Insertion at {position} of length {length}"),
+            SequenceModification::Deletion { position, length } => write!(f, "Deletion at {position} of length {length}"),
+            SequenceModification::Substitution { position, .. } => write!(f, "Substitution at {position}"),
+        }
+    }
+}

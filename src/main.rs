@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{BufReader, BufWriter},
+    io::{BufReader, BufWriter, Write},
 };
 
 use crate::error::Result;
@@ -177,6 +177,7 @@ impl ChooseAlphabetAndN for GeneratePair {
         let mut reference = ancestor.clone();
         let mut query = ancestor.clone();
 
+        // Create sequence modifiers.
         let SequenceModifierPair {
             mut reference_modifier,
             mut query_modifier,
@@ -187,16 +188,37 @@ impl ChooseAlphabetAndN for GeneratePair {
             &mut rng,
         );
 
+        // Create debug file if requested.
+        let mut debug_file = if let Some(debug_output) = &generate_pair_command.debug_output {
+            Some(BufWriter::new(File::create(debug_output)?))
+        } else {
+            None
+        };
+
+        // Create overlap detector.
         let mut template_switch_overlap_detector = TemplateSwitchOverlapDetector::new(
             &generate_pair_command.sequence_modification_parameters,
         );
+
+        // Modify reference.
         reference_modifier.apply(
             &mut reference,
             &mut template_switch_overlap_detector,
             &mut rng,
         )?;
+        if let Some(debug_file) = &mut debug_file {
+            writeln!(debug_file, "Reference Modifications")?;
+            template_switch_overlap_detector.write_modifications(debug_file)?;
+        }
         template_switch_overlap_detector.clear_modification_stack();
+
+        // Modify query.
         query_modifier.apply(&mut query, &mut template_switch_overlap_detector, &mut rng)?;
+        if let Some(debug_file) = &mut debug_file {
+            writeln!(debug_file, "\nQuery Modifications")?;
+            template_switch_overlap_detector.write_modifications(debug_file)?;
+        }
+        drop(debug_file);
 
         // Write sequences.
         write_fasta_file(
