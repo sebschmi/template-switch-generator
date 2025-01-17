@@ -85,6 +85,7 @@ impl ChooseAlphabetAndN for CreateNGramModel {
             &mut sequence_store,
             create_model_command.skip_unknown_characters,
             create_model_command.capitalise_characters,
+            &[],
         )?
         .into_iter()
         .map(|record| record.sequence_handle);
